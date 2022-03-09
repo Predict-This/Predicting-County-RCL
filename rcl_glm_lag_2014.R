@@ -1,3 +1,8 @@
+## Authors:
+##  - Montgomery, Barrett [Michigan State University, montg270@msu.edu]
+##  - Vsevolozhskaya, Olga [University of Kentucky, ovs222@uky.edu]
+##  - Tong, Xiaoran [National Institute of Health, xiaoran.tong@nih.gov]
+
 library(ggplot2)
 library(pROC)
 
