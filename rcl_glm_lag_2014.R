@@ -12,7 +12,7 @@ set.seed(1000)
 ## ---------------------------------------------------------
 remove(list=ls()); gc()
 
-dat <- readRDS("/final_data.rds")
+dat <- readRDS("final_data.rds") # xt: remove "/"
 
 ## remove "Other" votes and alternate specifications for the outcomes
 dat <- subset(dat, se=-c(percentother_2012_votes, rcl_2012, sens_2014, sens2_2014, sens3_2014))
@@ -142,7 +142,6 @@ rocA <- with(rocA, data.frame(TPR=rev(sensitivities), FPR=rev(1-specificities)))
 ## ---------------------------------------
 ## plot all ROC curves with the average
 ## ---------------------------------------
-setwd("C:/Users/montg/Dropbox/Ph.D Work/Dissertation/Data/Aim 1/results/")
 g <- ggplot() + theme_bw()
 g <- g + geom_abline(intercept = 0, slope = 1, size = 0.5, linetype = "dashed") # ref
 g <- g + geom_line(aes(x=FPR, y=TPR, group=sim), roc2, alpha=0.3) # per sim
@@ -250,4 +249,46 @@ with(hdc, table(Y, YHT))
 subset(ens, Y == 0 & TNF>THD)
 
 ## Output for SAS mapping
-write.csv(ens, file='C:\\Users\\montg\\Dropbox\\Ph.D Work\\Dissertation\\Data\\Aim 1\\Processed/ens_lag.csv')
+write.csv(ens, file='ens_lag.csv')
+
+## -----------------------------------------------------------------------------
+## plot discriminative histogram
+## -----------------------------------------------------------------------------
+## transform wide form to long form
+hst2 <- lapply(CRI, function(x)
+{
+    cbind(
+        ens[, c('county', 'N')],
+        legalized=ifelse(ens[, 'Y'], "Yes", "No"),
+        criteria=x,
+        prediction=ens[, x])
+})
+DCT <- c(acc="(ACC) weighted by classification Accuracy",
+         FNF="(FNF) weighted by False Negative Fraction",
+         PHT="(PHT) average Expected Probability (p-hat)",
+         TNF="(TNF) weighted by True Negative Fraction",
+         TPF="(TPF) weighted by True Positive Fraction",
+         YHT="(YHT) average hard-prediction (y-hat)")
+hst2 <- within(do.call(rbind, hst2), criteria <- DCT[criteria])
+
+## plot now
+g <- ggplot(hst2, aes(x=prediction)) + theme_bw()
+g <- g + geom_histogram(aes(y=..ndensity.., colour=legalized),
+                        fill="white", binwidth=0.04, position="identity", alpha=0.5)
+## g <- g + geom_density(aes(colour=legalized), alpha=0.4) # approximated density
+g <- g + geom_vline(xintercept =     THD, linetype="dashed", color = "red", size=.5) # current threshold, P or Q
+g <- g + geom_vline(xintercept = 1 - THD, linetype="dashed", color = "blue", size=.5) # threshold exchange: P <-> Q
+g <- g + facet_wrap(~criteria) # sub-plots by weight criteria
+g <- g + xlab("predicted probability of RCL (by ensemble or average)")
+g <- g + ylab("frequency of RCL vs. non-RCL (scaled)")
+g <- g + theme_bw() +
+    theme(strip.text.x = element_text(size = 11, face = "bold"),
+          strip.text.y = element_text(size = 11, face = "bold"),
+          legend.position = "bottom",
+          ## legend.title = element_blank(),
+          legend.margin=margin(t=0, unit='cm'),
+          axis.text = element_text(size = 9, face = "bold"),
+          axis.title = element_text(size = 12, face = "bold"),
+          plot.margin=unit(x=c(0,0,0,0), units="cm"))
+ggsave("hst_glm.png", g, width=19, height=10, scale=.6)
+## plot ..ndensity.. instead of ..count.., otherwise the legalized ones are nearly invisible, due to the low numbers.
